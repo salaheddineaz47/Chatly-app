@@ -10,10 +10,9 @@ import {
   Thread,
   LoadingIndicator,
 } from "stream-chat-react";
-// import "stream-chat-react/dist/css/index.css";
+import "../node_modules/stream-chat-react/dist/css/v2/index.css";
 
 const apikey = "6npt4sdsw2bc";
-
 const users = [
   {
     id: "john",
@@ -21,7 +20,7 @@ const users = [
     image: "https://getstream.imgix.net/images/random_svg/FS.png",
   },
   {
-    id: "johnn",
+    id: "john-salah",
     name: "Amine",
     image: "https://getstream.imgix.net/images/random_svg/FS.png",
   },
@@ -33,33 +32,54 @@ export default function App() {
   const [selectedUser, setSelectedUser] = useState(users[0]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function init() {
-      const chatClient = StreamChat.getInstance(apikey);
+      if (client) {
+        await client.disconnectUser();
+      }
+
+      const chatClient = new StreamChat(apikey);
 
       await chatClient.connectUser(
         selectedUser,
         chatClient.devToken(selectedUser.id)
       );
 
-      const channel = chatClient.channel("messaging", "react-talk", {
+      const newChannel = chatClient.channel("messaging", "react-talk", {
         image: "https://www.drupal.org/files/project-images/react.png",
         name: "Talk about React",
-        members: [selectedUser.id],
+        members: users.map((user) => user.id),
       });
-      await channel.watch();
-      setChannel(channel);
-      setClient(chatClient);
+
+      await newChannel.watch();
+
+      if (isMounted) {
+        setClient(chatClient);
+        setChannel(newChannel);
+      }
     }
 
     init();
 
-    if (client) return () => client.disconnectUser();
-  }, [selectedUser, client]);
+    return () => {
+      isMounted = false;
+      if (client) {
+        client.disconnectUser();
+        setClient(null);
+        setChannel(null);
+      }
+    };
+  }, [selectedUser]);
+
   if (!channel || !client) return <LoadingIndicator />;
 
   return (
     <div>
-      <select onChange={(e) => setSelectedUser(users[e.target.value])}>
+      <select
+        onChange={(e) => setSelectedUser(users[parseInt(e.target.value)])}
+        value={users.findIndex((user) => user.id === selectedUser.id)}
+      >
         {users.map((user, index) => (
           <option key={user.id} value={index}>
             {user.name}
